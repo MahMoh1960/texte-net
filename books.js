@@ -1,4 +1,4 @@
-/* Texte Net — bibliothèque, lecteur de livres et OCR (latin : français / anglais).
+/* Texte Net — bibliothèque, lecteur de livres et OCR (français, anglais, arabe).
    Dépend de window.TN, exposé par index.html. */
 (function () {
 'use strict';
@@ -85,9 +85,15 @@ async function deleteBook(id) {
 }
 
 /* =====================================================================
-   OCR — latin uniquement (français + anglais)
+   OCR — français + anglais (latin), arabe, ou arabe + latin
    ===================================================================== */
-let ocrWorker = null, ocrIdleT = null, ocrBusy = false, ocrLogger = null;
+const OCR_LANGS = {
+  latin: { codes: ['fra', 'eng'], label: 'Français + anglais', short: 'français / anglais' },
+  ara: { codes: ['ara'], label: 'Arabe', short: 'arabe' },
+  mixed: { codes: ['ara', 'fra', 'eng'], label: 'Arabe + français + anglais (plus lent)', short: 'arabe / français / anglais' }
+};
+const ocrLangKey = () => (OCR_LANGS[TN.settings.ocrLang] ? TN.settings.ocrLang : 'latin');
+let ocrWorker = null, ocrWorkerKey = '', ocrIdleT = null, ocrBusy = false, ocrLogger = null;
 function ocrStatusText(m) {
   const map = {
     'loading tesseract core': 'chargement du moteur…',
@@ -99,11 +105,13 @@ function ocrStatusText(m) {
   const base = map[m.status] || m.status;
   return m.status === 'recognizing text' ? `${base} ${Math.round((m.progress || 0) * 100)} %` : base;
 }
-async function getOcrWorker() {
+async function getOcrWorker(key) {
   clearTimeout(ocrIdleT);
+  if (ocrWorker && ocrWorkerKey !== key) { try { await ocrWorker.terminate(); } catch (e) { /* déjà arrêté */ } ocrWorker = null; }
   if (!ocrWorker) {
     await loadScript(V.tess);
-    ocrWorker = await window.Tesseract.createWorker(['fra', 'eng'], 1, {
+    ocrWorkerKey = key;
+    ocrWorker = await window.Tesseract.createWorker(OCR_LANGS[key].codes, 1, {
       workerPath: abs(V.tessWorker),
       corePath: abs(V.core),
       langPath: abs(V.lang),
@@ -117,9 +125,10 @@ async function ocr(canvas, onStatus) {
   if (ocrBusy) throw new Error('Une reconnaissance est déjà en cours.');
   ocrBusy = true; ocrLogger = onStatus;
   try {
-    const w = await getOcrWorker();
+    const key = ocrLangKey();
+    const w = await getOcrWorker(key);
     const { data } = await w.recognize(canvas);
-    return { text: data.text || '', confidence: Math.round(data.confidence || 0) };
+    return { text: data.text || '', confidence: Math.round(data.confidence || 0), lang: key };
   } catch (e) {
     try { if (ocrWorker) await ocrWorker.terminate(); } catch (e2) { /* déjà arrêté */ }
     ocrWorker = null;
@@ -131,7 +140,27 @@ async function ocr(canvas, onStatus) {
   }
 }
 const LOW_CONF = 55;
-const lowConfMsg = (c) => `Confiance faible (${c} %). L’OCR ne lit que le latin (français, anglais) : une page arabe ou de mauvaise qualité donnera un résultat inexploitable.`;
+const lowConfMsg = (c, lang) => lang === 'latin'
+  ? `Confiance faible (${c} %). Si la page est en arabe, relancez l’OCR en choisissant « Arabe » ; sinon la qualité de l’image est insuffisante.`
+  : `Confiance faible (${c} %). Vérifiez que la langue choisie correspond à la page ; l’arabe très vocalisé, calligraphié ou manuscrit est mal reconnu.`;
+const okMsg = (c, lang) => `OCR terminé (confiance ${c} %). À relire${lang === 'latin' ? '' : ' : l’arabe se lit avec plus d’erreurs que le latin'}.`;
+
+// Choix de la langue avant chaque OCR (la dernière langue choisie est rappelée en premier)
+function askOcrLang() {
+  return new Promise((resolve) => {
+    const cur = ocrLangKey();
+    const order = [cur, ...Object.keys(OCR_LANGS).filter((k) => k !== cur)];
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; $('#rd-sheet').removeEventListener('click', onBg); resolve(v); };
+    const onBg = (e) => { if (e.target.id === 'rd-sheet') finish(null); };
+    $('#rd-sheet').addEventListener('click', onBg);
+    openSheet('Langue du texte à reconnaître', order.map((k) => [
+      (k === cur ? '✓ ' : '') + OCR_LANGS[k].label,
+      () => { TN.settings.ocrLang = k; TN.saveSettings(); finish(k); },
+      k === cur ? 'primary' : ''
+    ]));
+  });
+}
 
 async function fileToCanvas(file, maxSide) {
   const bmp = await createImageBitmap(file);
@@ -146,7 +175,7 @@ async function fileToCanvas(file, maxSide) {
 }
 
 // Bouton « Image (OCR) » de l'onglet Nettoyer
-$('#cl-ocr').onclick = () => $('#cl-ocr-file').click();
+$('#cl-ocr').onclick = async () => { if (await askOcrLang()) $('#cl-ocr-file').click(); };
 $('#cl-ocr-file').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f) return;
@@ -157,8 +186,8 @@ $('#cl-ocr-file').addEventListener('change', async (e) => {
     c.width = c.height = 0;
     if (!r.text.trim()) { TN.setStats(''); toast('Aucun texte reconnu', 3000); return; }
     TN.toCleaner(r.text);
-    if (r.confidence < LOW_CONF) toast(lowConfMsg(r.confidence), 6000);
-    else toast(`OCR terminé (confiance ${r.confidence} %). À relire.`, 3500);
+    if (r.confidence < LOW_CONF) toast(lowConfMsg(r.confidence, r.lang), 7000);
+    else toast(okMsg(r.confidence, r.lang), 4000);
   } catch (err) { TN.setStats(''); toast('OCR impossible : ' + (err.message || err), 5000); }
 });
 
@@ -575,11 +604,11 @@ async function showPdfText(token) {
   const wrap = el('div', 'rd-text'); wrap.style.fontSize = TN.settings.rdFont + 'px';
   if (r.from === 'none') {
     wrap.append(el('p', 'notice', 'Cette page ne contient pas de texte sélectionnable (page scannée ou image).'));
-    const b = el('button', 'btn primary', 'Reconnaître le texte (OCR français / anglais)');
+    const b = el('button', 'btn primary', 'Reconnaître le texte (OCR)');
     b.onclick = runOcrOnPage; wrap.append(b);
-    wrap.append(el('p', 'muted', 'L’OCR ne lit que le latin. Pour une page arabe, utilisez le mode Page.'));
+    wrap.append(el('p', 'muted', 'Langues : français, anglais ou arabe (à choisir avant la reconnaissance).'));
   } else {
-    if (r.from === 'ocr') wrap.append(el('p', 'notice', 'Texte reconnu par OCR (français / anglais) : à relire.'));
+    if (r.from === 'ocr') wrap.append(el('p', 'notice', 'Texte reconnu par OCR : à relire.'));
     const text = window.Cleaner.clean(r.raw, readerCleanOpts()).text;
     text.split('\n\n').filter(Boolean).forEach((p) => { const e = el('p', null, p); e.dir = 'auto'; wrap.append(e); });
   }
@@ -595,6 +624,8 @@ function showFlow() {
 async function runOcrOnPage() {
   if (!rd || rd.kind !== 'pdf') return;
   const mine = rd, n = mine.pos;
+  if (!(await askOcrLang())) return;
+  if (rd !== mine || mine.pos !== n) return;
   try {
     setStatus('OCR : préparation de la page…');
     const page = await mine.pdf.getPage(n);
@@ -608,7 +639,7 @@ async function runOcrOnPage() {
     await idb('ocr', 'readwrite', (s) => s.put(r.text, mine.meta.id + ':' + n));
     mine.rawCache.delete(n);
     if (rd === mine && mine.pos === n) { mine.mode = 'text'; mine.meta.mode = 'text'; await show(); }
-    if (rd === mine) setStatus(r.confidence < LOW_CONF ? lowConfMsg(r.confidence) : `OCR terminé (confiance ${r.confidence} %).`, r.confidence < LOW_CONF);
+    if (rd === mine) setStatus(r.confidence < LOW_CONF ? lowConfMsg(r.confidence, r.lang) : okMsg(r.confidence, r.lang), r.confidence < LOW_CONF);
   } catch (e) { if (rd === mine) setStatus('OCR impossible : ' + ((e && e.message) || e), true); }
 }
 
@@ -733,7 +764,12 @@ async function sendText(sel, dest) {
   if (dest === 'clean') TN.toCleaner(text);
   else if (dest === 'translate') TN.toTranslate(text);
   else if (dest === 'note') TN.toNote(text, src);
-  else TN.copyText(text);
+  else if (dest === 'summary') {
+    const r = TN.summarize(text);
+    if (!r.text.trim()) { toast('Rien à résumer sur cette page', 3500); return; }
+    toast(r.short ? 'Texte court : repris tel quel' : `Résumé : ${r.count} phrase(s) sur ${r.total}`, 3000);
+    TN.toNote(r.text, src + ' (résumé automatique)', r.keywords.slice(0, 4));
+  } else TN.copyText(text);
 }
 function openSendSheet() {
   if (!rd) return;
@@ -750,6 +786,7 @@ function openSendSheet() {
     ['Nettoyer →', () => sendText(sel, 'clean')],
     ['Traduire →', () => sendText(sel, 'translate')],
     ['Carnet → (source préremplie)', () => sendText(sel, 'note')],
+    ['Résumer → Carnet', () => sendText(sel, 'summary')],
     ['Copier', () => sendText(sel, 'copy')],
     ['Tout le livre en .txt', exportBook]
   ], before);

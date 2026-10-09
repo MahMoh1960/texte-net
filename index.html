@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="nuit">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Texte Net</title>
 <meta name="description" content="Redresse le texte copié des PDF, traduit arabe, français, anglais et garde vos résumés.">
-<meta name="theme-color" content="#0f6b5c">
+<meta name="theme-color" content="#0a1233">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -13,17 +13,20 @@
 :root{
   --bg:#f6f1e7; --surface:#fffdf8; --ink:#1d2421; --muted:#5d6a64; --line:#ddd5c4;
   --accent:#0f6b5c; --accent-ink:#ffffff; --accent-soft:#dcefe9; --danger:#a63a1c;
-  --radius:14px; --tab-h:64px;
+  --top-bg:var(--accent); --top-ink:var(--accent-ink); --top-line:transparent; --shadow:rgba(0,0,0,.45);
+  --radius:14px; --tab-h:64px; color-scheme:light;
+}
+/* Nuit : jaune sur bleu nuit (thème par défaut) */
+:root[data-theme="nuit"]{
+  --bg:#0a1233; --surface:#111c4a; --ink:#ffe45c; --muted:#d9bf55; --line:#2c3d85;
+  --accent:#ffd21f; --accent-ink:#0a1233; --accent-soft:#1c2b6b; --danger:#ff9a78;
+  --top-bg:#0d1740; --top-ink:#ffe45c; --top-line:#ffd21f; --shadow:rgba(0,0,10,.65);
+  color-scheme:dark;
 }
 :root[data-theme="dark"]{
   --bg:#101513; --surface:#18201d; --ink:#e9efec; --muted:#9aaaa3; --line:#2a3631;
   --accent:#3cb89f; --accent-ink:#06231d; --accent-soft:#17332d; --danger:#ef8a6c;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#101513; --surface:#18201d; --ink:#e9efec; --muted:#9aaaa3; --line:#2a3631;
-    --accent:#3cb89f; --accent-ink:#06231d; --accent-soft:#17332d; --danger:#ef8a6c;
-  }
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -34,7 +37,8 @@ body{
 }
 .top{
   position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
-  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px; background:var(--accent); color:var(--accent-ink);
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px; background:var(--top-bg); color:var(--top-ink);
+  border-bottom:2px solid var(--top-line);
 }
 .top h1{margin:0; font-size:1.15rem; letter-spacing:.2px}
 .top button{background:transparent; border:1px solid currentColor; color:inherit; border-radius:10px; width:40px; height:40px; font-size:1.05rem}
@@ -68,6 +72,9 @@ details.opts label.sel{flex-direction:column; align-items:stretch; gap:4px; padd
 details.opts input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent)}
 .langs{display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center}
 .langs .btn{padding:0 12px}
+.sum-opts{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.sum-opts .sel{display:flex; flex-direction:column; gap:4px; font-size:.82rem; color:var(--muted)}
+#cl-sum{min-height:20vh; margin-top:10px}
 .status{min-height:1.4em; margin:8px 2px; font-size:.9rem; color:var(--muted)}
 .status.err{color:var(--danger)}
 .note-small{margin-top:18px; font-size:.82rem; color:var(--muted)}
@@ -126,7 +133,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
 .rd-controls .btn{min-height:40px; padding:0 12px; min-width:44px}
 .rd-controls .btn[disabled]{opacity:.4}
 .rd-controls [hidden]{display:none}
-.sheet{position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.45); display:flex; align-items:flex-end}
+.sheet{position:fixed; inset:0; z-index:20; background:var(--shadow); display:flex; align-items:flex-end}
 .sheet[hidden]{display:none}
 .sheet-card{background:var(--surface); width:100%; max-height:78vh; overflow:auto; border-radius:18px 18px 0 0; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 .sheet-card .btn{display:block; width:100%; margin-top:8px; text-align:start}
@@ -143,7 +150,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
 <body>
 <header class="top">
   <h1>Texte Net</h1>
-  <button id="btn-theme" aria-label="Changer le thème clair ou sombre" title="Thème">🌓</button>
+  <button id="btn-theme" aria-label="Changer de thème" title="Thème : nuit, clair, sombre">🌓</button>
 </header>
 
 <main>
@@ -153,7 +160,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
       <h2>Texte copié du PDF</h2>
       <div class="row">
         <button class="btn small" id="cl-paste">Coller</button>
-        <button class="btn small" id="cl-ocr" title="Photo ou capture d’écran (français, anglais)">Image (OCR)</button>
+        <button class="btn small" id="cl-ocr" title="Photo ou capture d’écran (français, anglais, arabe)">Image (OCR)</button>
         <button class="btn small" id="cl-clear">Effacer</button>
         <input type="file" id="cl-ocr-file" accept="image/*" hidden>
       </div>
@@ -191,6 +198,36 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
       <button class="btn" id="cl-to-tr">Traduire →</button>
       <button class="btn" id="cl-to-note">Carnet →</button>
     </div>
+
+    <div class="row head">
+      <h2>Résumé automatique</h2>
+      <span id="cl-sum-stats" class="muted"></span>
+    </div>
+    <div class="sum-opts">
+      <label class="sel">Longueur
+        <select data-opt="sumSize" aria-label="Longueur du résumé">
+          <option value="short">Court (≈ 10 %)</option>
+          <option value="medium">Moyen (≈ 20 %)</option>
+          <option value="long">Détaillé (≈ 35 %)</option>
+        </select>
+      </label>
+      <label class="sel">Présentation
+        <select data-opt="sumFormat" aria-label="Présentation du résumé">
+          <option value="para">Paragraphes</option>
+          <option value="bullets">Puces</option>
+        </select>
+      </label>
+    </div>
+    <div class="row actions">
+      <button class="btn primary" id="cl-sum-go">Résumer le texte</button>
+    </div>
+    <textarea id="cl-sum" dir="auto" spellcheck="false" placeholder="Le résumé apparaît ici, modifiable…"></textarea>
+    <div class="row actions">
+      <button class="btn primary" id="cl-sum-copy">Copier</button>
+      <button class="btn" id="cl-sum-note">Carnet →</button>
+      <button class="btn" id="cl-sum-tr">Traduire →</button>
+    </div>
+    <p class="note-small">Le résumé est « extractif » : il reprend, dans l’ordre, les phrases les plus représentatives du texte, sans les reformuler. Il se calcule sur l’appareil, sans Internet. Relisez-le et vérifiez-le avant de le citer.</p>
   </section>
 
   <!-- ========== TRADUIRE ========== -->
@@ -283,7 +320,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
       <input type="file" id="bk-file" multiple hidden accept=".pdf,.epub,.docx,.odt,.txt,.md,.html,.htm,application/pdf,application/epub+zip">
       <div id="bk-count" class="muted" style="margin:0 2px 8px"></div>
       <div id="bk-list"></div>
-      <p class="note-small">Formats : PDF, EPUB, DOCX, ODT, TXT, MD, HTML. Les livres sont gardés sur cet appareil et ne sont envoyés nulle part. Un PDF se lit en image (Page) ou en texte reformaté (Texte). Pour un PDF scanné, l’OCR transforme la page en texte : français et anglais uniquement.</p>
+      <p class="note-small">Formats : PDF, EPUB, DOCX, ODT, TXT, MD, HTML. Les livres sont gardés sur cet appareil et ne sont envoyés nulle part. Un PDF se lit en image (Page) ou en texte reformaté (Texte). Pour un PDF scanné, l’OCR transforme la page en texte (français, anglais ou arabe, au choix).</p>
     </div>
     <div id="books-reader" hidden>
       <div class="rd-top">
@@ -300,7 +337,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
         <button class="btn" id="rd-mode">Texte</button>
         <button class="btn" id="rd-minus" aria-label="Plus petit">A−</button>
         <button class="btn" id="rd-plus" aria-label="Plus grand">A+</button>
-        <button class="btn" id="rd-ocr" title="Reconnaissance de texte, français et anglais">OCR</button>
+        <button class="btn" id="rd-ocr" title="Reconnaissance de texte (français, anglais, arabe)">OCR</button>
         <button class="btn primary" id="rd-send">Envoyer</button>
       </div>
     </div>
@@ -318,6 +355,7 @@ details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="cleaner.js"></script>
+<script src="summarizer.js"></script>
 <script>
 (() => {
 'use strict';
@@ -334,21 +372,27 @@ const store = {
 const SETTINGS_KEY = 'textenet.settings.v1';
 const NOTES_KEY = 'textenet.notes.v1';
 const settings = Object.assign({
-  theme: 'auto', dehyphenate: true, pageNumbers: true, repeated: true, arabicForms: true,
+  theme: 'nuit', themeV: 0, dehyphenate: true, pageNumbers: true, repeated: true, arabicForms: true,
   arabicVisual: false, paraSep: 'blank', from: 'auto', to: 'fr',
-  cleanBeforeTranslate: false, watchClipboard: false, rdFont: 18, rdMargins: true
+  cleanBeforeTranslate: false, watchClipboard: false, rdFont: 18, rdMargins: true,
+  sumSize: 'medium', sumFormat: 'para', ocrLang: 'latin'
 }, store.get(SETTINGS_KEY, {}));
 const saveSettings = () => store.set(SETTINGS_KEY, settings);
 
-/* ---------- thème ---------- */
-const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
-const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && prefersDark());
+/* ---------- thème : nuit (jaune sur bleu nuit), clair, sombre ---------- */
+const THEMES = ['nuit', 'light', 'dark'];
+const THEME_NAMES = { nuit: 'Nuit (jaune sur bleu)', light: 'Clair', dark: 'Sombre (vert)' };
+const THEME_COLORS = { nuit: '#0a1233', light: '#0f6b5c', dark: '#101513' };
+if (settings.themeV !== 2) { settings.theme = 'nuit'; settings.themeV = 2; saveSettings(); }
+if (!THEMES.includes(settings.theme)) settings.theme = 'nuit';
 function applyTheme() {
-  const r = document.documentElement;
-  if (settings.theme === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', settings.theme);
-  $('meta[name=theme-color]').content = isDark() ? '#101513' : '#0f6b5c';
+  document.documentElement.setAttribute('data-theme', settings.theme);
+  $('meta[name=theme-color]').content = THEME_COLORS[settings.theme];
 }
-$('#btn-theme').onclick = () => { settings.theme = isDark() ? 'light' : 'dark'; saveSettings(); applyTheme(); };
+$('#btn-theme').onclick = () => {
+  settings.theme = THEMES[(THEMES.indexOf(settings.theme) + 1) % THEMES.length];
+  saveSettings(); applyTheme(); toast('Thème : ' + THEME_NAMES[settings.theme]);
+};
 
 /* ---------- utilitaires ---------- */
 let toastT;
@@ -402,7 +446,7 @@ $$('[data-opt]').forEach((c) => {
   c.addEventListener('change', () => {
     settings[k] = c.type === 'checkbox' ? c.checked : c.value;
     saveSettings();
-    if (k !== 'cleanBeforeTranslate' && k !== 'watchClipboard') runClean();
+    if (!['cleanBeforeTranslate', 'watchClipboard', 'sumSize', 'sumFormat', 'ocrLang'].includes(k)) runClean();
   });
 });
 const cleanOpts = () => ({
@@ -450,6 +494,29 @@ async function checkClipboard() {
 }
 window.addEventListener('focus', checkClipboard);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkClipboard(); });
+
+/* ---------- résumé automatique ---------- */
+const LANG_NAMES = { fr: 'français', en: 'anglais', ar: 'arabe' };
+const summarize = (text) => window.Summarizer.summarize(text, { size: settings.sumSize, format: settings.sumFormat });
+const clSum = $('#cl-sum'), clSumStats = $('#cl-sum-stats');
+let lastKeywords = [];
+$('#cl-sum-go').onclick = () => {
+  const src = clOut.value.trim() ? clOut.value : clIn.value;
+  if (!src.trim()) { toast('Collez d’abord un texte'); return; }
+  clSumStats.textContent = 'Calcul…';
+  setTimeout(() => {
+    try {
+      const r = summarize(src);
+      clSum.value = r.text; lastKeywords = r.keywords;
+      clSumStats.textContent = r.short
+        ? 'Texte court : repris tel quel'
+        : `${r.count} phrase${r.count > 1 ? 's' : ''} sur ${r.total} · ${LANG_NAMES[r.lang]}`;
+    } catch (e) { clSumStats.textContent = ''; toast('Résumé impossible : ' + (e.message || e), 4000); }
+  }, 30);
+};
+$('#cl-sum-copy').onclick = () => copyText(clSum.value);
+$('#cl-sum-note').onclick = () => newNoteFrom(clSum.value, '', lastKeywords.slice(0, 4));
+$('#cl-sum-tr').onclick = () => { if (!clSum.value.trim()) { toast('Aucun résumé'); return; } trIn.value = clSum.value; showTab('translate'); };
 
 /* ---------- traducteur ---------- */
 const trIn = $('#tr-in'), trOut = $('#tr-out'), trStatus = $('#tr-status'), trGo = $('#tr-go');
@@ -624,7 +691,7 @@ $('#nt-search').addEventListener('input', debounce(renderList, 200));
 let current = null, dirty = false;
 const edTitle = $('#ed-title'), edSource = $('#ed-source'), edTags = $('#ed-tags'), edBody = $('#ed-body');
 function openEditor(note, preset) {
-  current = note ? { ...note } : { id: uid(), title: '', source: (preset && preset.source) || '', tags: [], body: (preset && preset.body) || '', created: Date.now(), updated: Date.now() };
+  current = note ? { ...note } : { id: uid(), title: '', source: (preset && preset.source) || '', tags: (preset && preset.tags) || [], body: (preset && preset.body) || '', created: Date.now(), updated: Date.now() };
   dirty = false; // une note préremplie n'est enregistrée qu'après une modification
   edTitle.value = current.title; edSource.value = current.source || '';
   edTags.value = (current.tags || []).map((t) => '#' + t).join(' '); edBody.value = current.body;
@@ -658,9 +725,9 @@ function closeEditor(fromPop) {
   if (!fromPop && history.state && history.state.editor) history.back();
 }
 window.addEventListener('popstate', () => { if (editorOpen) closeEditor(true); });
-function newNoteFrom(body, source) {
+function newNoteFrom(body, source, tags) {
   if (!body || !body.trim()) { toast('Aucun texte à envoyer'); return; }
-  closeEditor(); showTab('notes'); openEditor(null, { body, source }); edTitle.focus();
+  closeEditor(); showTab('notes'); openEditor(null, { body, source, tags }); edTitle.focus();
 }
 $('#nt-new').onclick = () => { openEditor(null); edTitle.focus(); };
 $('#ed-back').onclick = () => closeEditor();
@@ -717,12 +784,12 @@ window.TN = {
   setStats: (m) => { clStats.textContent = m; },
   toCleaner: (text) => { closeEditor(); clIn.value = text; runClean(); showTab('clean'); },
   toTranslate: (text) => { closeEditor(); trIn.value = text; showTab('translate'); },
-  toNote: (text, source) => newNoteFrom(text, source)
+  toNote: (text, source, tags) => newNoteFrom(text, source, tags),
+  summarize
 };
 
 /* ---------- démarrage ---------- */
 applyTheme();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 showTab('clean');
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { /* facultatif */ }
 

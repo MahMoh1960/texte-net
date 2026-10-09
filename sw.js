@@ -1,6 +1,6 @@
-const CACHE = 'texte-net-v2';
+const CACHE = 'texte-net-v3';
 const ASSETS = [
-  './', './index.html', './cleaner.js', './books.js', './manifest.webmanifest',
+  './', './index.html', './cleaner.js', './summarizer.js', './books.js', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './maskable-512.png'
 ];
 
