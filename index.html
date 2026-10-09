@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Texte Net</title>
+<meta name="description" content="Redresse le texte copié des PDF, traduit arabe, français, anglais et garde vos résumés.">
+<meta name="theme-color" content="#0f6b5c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f1e7; --surface:#fffdf8; --ink:#1d2421; --muted:#5d6a64; --line:#ddd5c4;
+  --accent:#0f6b5c; --accent-ink:#ffffff; --accent-soft:#dcefe9; --danger:#a63a1c;
+  --radius:14px; --tab-h:64px;
+}
+:root[data-theme="dark"]{
+  --bg:#101513; --surface:#18201d; --ink:#e9efec; --muted:#9aaaa3; --line:#2a3631;
+  --accent:#3cb89f; --accent-ink:#06231d; --accent-soft:#17332d; --danger:#ef8a6c;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101513; --surface:#18201d; --ink:#e9efec; --muted:#9aaaa3; --line:#2a3631;
+    --accent:#3cb89f; --accent-ink:#06231d; --accent-soft:#17332d; --danger:#ef8a6c;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.5 system-ui,-apple-system,"Segoe UI","Noto Naskh Arabic","Noto Sans Arabic",sans-serif;
+  padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+}
+.top{
+  position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px; background:var(--accent); color:var(--accent-ink);
+}
+.top h1{margin:0; font-size:1.15rem; letter-spacing:.2px}
+.top button{background:transparent; border:1px solid currentColor; color:inherit; border-radius:10px; width:40px; height:40px; font-size:1.05rem}
+main{max-width:760px; margin:0 auto; padding:14px 16px}
+.panel[hidden]{display:none}
+h2{font-size:.95rem; margin:14px 0 6px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.row.head{justify-content:space-between}
+.row.head h2{margin:14px 0 6px}
+.muted{color:var(--muted); font-size:.85rem}
+textarea,input[type=text],input[type=search],select{
+  width:100%; font:inherit; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;
+}
+textarea{min-height:26vh; resize:vertical; line-height:1.6}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px}
+.btn{
+  font:inherit; font-weight:600; min-height:44px; padding:0 16px; border-radius:12px; cursor:pointer;
+  background:var(--surface); color:var(--ink); border:1px solid var(--line);
+}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.btn.small{min-height:36px; padding:0 12px; font-size:.9rem}
+.btn.danger{color:var(--danger)}
+.btn:active{transform:translateY(1px)}
+.actions{margin-top:10px}
+.actions .btn{flex:1 1 auto}
+details.opts{margin:10px 0; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:2px 14px}
+details.opts summary{cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:600}
+details.opts label{display:flex; gap:10px; align-items:center; min-height:40px}
+details.opts label.sel{flex-direction:column; align-items:stretch; gap:4px; padding:6px 0 10px}
+details.opts input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent)}
+.langs{display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center}
+.langs .btn{padding:0 12px}
+.status{min-height:1.4em; margin:8px 2px; font-size:.9rem; color:var(--muted)}
+.status.err{color:var(--danger)}
+.note-small{margin-top:18px; font-size:.82rem; color:var(--muted)}
+/* carnet */
+.toolbar{display:flex; gap:8px; margin-bottom:10px}
+.toolbar input{flex:1}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px}
+.chip{font:inherit; font-size:.85rem; padding:4px 12px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+.chip.on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.card{
+  display:block; width:100%; text-align:start; font:inherit; color:inherit; cursor:pointer;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:12px 14px; margin-bottom:10px;
+}
+.card .t{font-weight:700; margin-bottom:2px; overflow-wrap:anywhere}
+.card .m{font-size:.82rem; color:var(--muted); margin-bottom:4px}
+.card .s{font-size:.92rem; color:var(--ink); opacity:.85; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere}
+.card .tg{margin-top:6px; font-size:.8rem; color:var(--accent)}
+.empty{color:var(--muted); text-align:center; padding:28px 8px}
+.field{margin-bottom:10px}
+.field label{display:block; font-size:.82rem; color:var(--muted); margin:0 2px 4px}
+#ed-body{min-height:42vh}
+details.more{margin-top:14px}
+details.more summary{cursor:pointer; min-height:44px; display:flex; align-items:center; color:var(--muted); font-weight:600}
+/* barre d'onglets */
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:6; display:flex; background:var(--surface);
+  border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom);
+}
+.tabbar button{
+  flex:1; height:var(--tab-h); border:0; background:transparent; color:var(--muted); font:inherit; font-size:.8rem;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer;
+}
+.tabbar button span{font-size:1.3rem; line-height:1}
+.tabbar button.on{color:var(--accent); font-weight:700}
+/* livres */
+.book{display:flex; gap:8px; align-items:stretch; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; padding:4px 8px 4px 0}
+.book-main{flex:1; min-width:0; text-align:start; font:inherit; color:inherit; background:transparent; border:0; padding:10px 14px; cursor:pointer}
+.book-main .t{font-weight:700; overflow-wrap:anywhere}
+.book-main .m{font-size:.82rem; color:var(--muted); margin-top:2px}
+.book .btn{align-self:center}
+.rd-top{display:flex; gap:8px; align-items:center; position:sticky; top:calc(env(safe-area-inset-top) + 60px); z-index:4; background:var(--bg); padding:6px 0}
+.rd-title{flex:1; min-width:0; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rd-body{overflow-x:auto; padding-bottom:150px; -webkit-overflow-scrolling:touch}
+.rd-page{display:flex; justify-content:flex-start}
+.rd-page canvas{background:#fff; border:1px solid var(--line); border-radius:6px; max-width:none}
+.rd-text{max-width:42rem; margin:0 auto; line-height:1.75}
+.rd-text p{margin:0 0 .9em; overflow-wrap:anywhere}
+.rd-text h3{margin:1.2em 0 .5em; font-size:1.15em}
+.notice{background:var(--accent-soft); border-radius:10px; padding:8px 12px; font-size:.9rem}
+.rd-controls{
+  position:fixed; left:0; right:0; z-index:7; bottom:calc(var(--tab-h) + env(safe-area-inset-bottom));
+  display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:8px 10px;
+  background:var(--surface); border-top:1px solid var(--line);
+}
+.rd-controls .btn{min-height:40px; padding:0 12px; min-width:44px}
+.rd-controls .btn[disabled]{opacity:.4}
+.rd-controls [hidden]{display:none}
+.sheet{position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.45); display:flex; align-items:flex-end}
+.sheet[hidden]{display:none}
+.sheet-card{background:var(--surface); width:100%; max-height:78vh; overflow:auto; border-radius:18px 18px 0 0; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.sheet-card .btn{display:block; width:100%; margin-top:8px; text-align:start}
+.sheet-opt{display:flex; gap:10px; align-items:center; min-height:44px; margin-top:6px}
+.sheet-opt input{width:20px; height:20px; accent-color:var(--accent)}
+#toast{
+  position:fixed; left:50%; bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px); transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:12px; font-size:.9rem;
+  opacity:0; pointer-events:none; transition:.2s; z-index:9; max-width:90vw; text-align:center;
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Texte Net</h1>
+  <button id="btn-theme" aria-label="Changer le thème clair ou sombre" title="Thème">🌓</button>
+</header>
+
+<main>
+  <!-- ========== NETTOYER ========== -->
+  <section id="tab-clean" class="panel">
+    <div class="row head">
+      <h2>Texte copié du PDF</h2>
+      <div class="row">
+        <button class="btn small" id="cl-paste">Coller</button>
+        <button class="btn small" id="cl-ocr" title="Photo ou capture d’écran (français, anglais)">Image (OCR)</button>
+        <button class="btn small" id="cl-clear">Effacer</button>
+        <input type="file" id="cl-ocr-file" accept="image/*" hidden>
+      </div>
+    </div>
+    <textarea id="cl-in" dir="auto" spellcheck="false" placeholder="Collez ici le passage copié depuis un PDF…"></textarea>
+
+    <details class="opts">
+      <summary>Options de nettoyage</summary>
+      <label><input type="checkbox" data-opt="dehyphenate"> Recoller les mots coupés par un tiret</label>
+      <label><input type="checkbox" data-opt="pageNumbers"> Supprimer les numéros de page isolés</label>
+      <label><input type="checkbox" data-opt="repeated"> Supprimer les en-têtes et pieds de page répétés</label>
+      <label><input type="checkbox" data-opt="arabicForms"> Réparer les lettres arabes détachées</label>
+      <label><input type="checkbox" data-opt="arabicVisual"> Arabe à l’envers (ordre visuel)</label>
+      <label class="sel">Séparation des paragraphes
+        <select data-opt="paraSep">
+          <option value="blank">Ligne vide entre les paragraphes</option>
+          <option value="single">Retour à la ligne simple</option>
+          <option value="none">Un seul bloc continu</option>
+        </select>
+      </label>
+      <label><input type="checkbox" data-opt="watchClipboard"> Lire le presse-papiers à l’ouverture</label>
+    </details>
+
+    <div class="row head">
+      <h2>Texte redressé</h2>
+      <span id="cl-stats" class="muted"></span>
+    </div>
+    <textarea id="cl-out" dir="auto" spellcheck="false" placeholder="Le résultat apparaît ici, modifiable…"></textarea>
+    <div class="row actions">
+      <button class="btn primary" id="cl-copy">Copier</button>
+      <button class="btn" id="cl-save">Enregistrer .txt</button>
+      <button class="btn" id="cl-share">Partager</button>
+    </div>
+    <div class="row actions">
+      <button class="btn" id="cl-to-tr">Traduire →</button>
+      <button class="btn" id="cl-to-note">Carnet →</button>
+    </div>
+  </section>
+
+  <!-- ========== TRADUIRE ========== -->
+  <section id="tab-translate" class="panel" hidden>
+    <div class="langs">
+      <select id="tr-from" aria-label="Langue source">
+        <option value="auto">Détecter</option>
+        <option value="ar">العربية</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+      <button class="btn" id="tr-swap" aria-label="Inverser les langues">⇄</button>
+      <select id="tr-to" aria-label="Langue cible">
+        <option value="ar">العربية</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="row head">
+      <h2>Texte à traduire</h2>
+      <div class="row">
+        <button class="btn small" id="tr-paste">Coller</button>
+        <button class="btn small" id="tr-clear">Effacer</button>
+      </div>
+    </div>
+    <textarea id="tr-in" dir="auto" placeholder="Saisissez ou collez le texte…"></textarea>
+    <details class="opts">
+      <summary>Options</summary>
+      <label><input type="checkbox" data-opt="cleanBeforeTranslate"> Nettoyer le texte avant de traduire</label>
+    </details>
+    <div class="row actions">
+      <button class="btn primary" id="tr-go">Traduire</button>
+    </div>
+    <div id="tr-status" class="status" role="status" aria-live="polite"></div>
+    <h2>Traduction</h2>
+    <textarea id="tr-out" dir="auto" placeholder="La traduction apparaît ici…"></textarea>
+    <div class="row actions">
+      <button class="btn primary" id="tr-copy">Copier</button>
+      <button class="btn" id="tr-save">Enregistrer .txt</button>
+      <button class="btn" id="tr-to-note">Carnet →</button>
+    </div>
+    <p class="note-small">La traduction nécessite Internet. Le texte est envoyé à un service de traduction en ligne (Google, ou MyMemory en secours) : évitez d’y coller des documents confidentiels.</p>
+  </section>
+
+  <!-- ========== CARNET ========== -->
+  <section id="tab-notes" class="panel" hidden>
+    <div id="notes-list-view">
+      <div class="toolbar">
+        <input type="search" id="nt-search" placeholder="Rechercher titre, source, tag, texte…" dir="auto" aria-label="Rechercher dans le carnet">
+        <button class="btn primary" id="nt-new">+ Note</button>
+      </div>
+      <div id="nt-tags" class="chips"></div>
+      <div id="nt-count" class="muted" style="margin:0 2px 8px"></div>
+      <div id="nt-list"></div>
+      <details class="more">
+        <summary>Sauvegarde et export</summary>
+        <div class="row actions">
+          <button class="btn" id="nt-export-txt">Tout exporter (.txt)</button>
+          <button class="btn" id="nt-backup">Sauvegarde (.json)</button>
+          <button class="btn" id="nt-import">Importer une sauvegarde</button>
+        </div>
+        <input type="file" id="nt-file" accept=".json,application/json" hidden>
+        <p class="note-small">Les notes sont stockées sur cet appareil. Faites une sauvegarde .json avant de désinstaller l’application ou de vider les données du navigateur.</p>
+      </details>
+    </div>
+
+    <div id="notes-editor" hidden>
+      <div class="row head" style="margin-bottom:8px">
+        <button class="btn small" id="ed-back">← Retour</button>
+        <span id="ed-date" class="muted"></span>
+      </div>
+      <div class="field"><label for="ed-title">Titre</label><input type="text" id="ed-title" dir="auto" placeholder="Titre du résumé"></div>
+      <div class="field"><label for="ed-source">Source / auteur (optionnel)</label><input type="text" id="ed-source" dir="auto" placeholder="Ex. Nom, année, titre de l’article"></div>
+      <div class="field"><label for="ed-tags">Tags (optionnel)</label><input type="text" id="ed-tags" dir="auto" placeholder="#innovation #risque, citations"></div>
+      <div class="field"><label for="ed-body">Résumé</label><textarea id="ed-body" dir="auto" placeholder="Votre résumé…"></textarea></div>
+      <div class="row actions">
+        <button class="btn primary" id="ed-copy">Copier</button>
+        <button class="btn" id="ed-share">Partager</button>
+        <button class="btn" id="ed-export">Exporter .txt</button>
+        <button class="btn danger" id="ed-delete">Supprimer</button>
+      </div>
+      <p class="note-small">Enregistrement automatique.</p>
+    </div>
+  </section>
+
+  <!-- ========== LIVRES ========== -->
+  <section id="tab-books" class="panel" hidden>
+    <div id="books-lib">
+      <div class="toolbar"><button class="btn primary" id="bk-import" style="flex:1">+ Importer un livre</button></div>
+      <input type="file" id="bk-file" multiple hidden accept=".pdf,.epub,.docx,.odt,.txt,.md,.html,.htm,application/pdf,application/epub+zip">
+      <div id="bk-count" class="muted" style="margin:0 2px 8px"></div>
+      <div id="bk-list"></div>
+      <p class="note-small">Formats : PDF, EPUB, DOCX, ODT, TXT, MD, HTML. Les livres sont gardés sur cet appareil et ne sont envoyés nulle part. Un PDF se lit en image (Page) ou en texte reformaté (Texte). Pour un PDF scanné, l’OCR transforme la page en texte : français et anglais uniquement.</p>
+    </div>
+    <div id="books-reader" hidden>
+      <div class="rd-top">
+        <button class="btn small" id="rd-back">← Livres</button>
+        <div id="rd-title" class="rd-title" dir="auto"></div>
+        <button class="btn small" id="rd-toc-btn">Sommaire</button>
+      </div>
+      <div id="rd-status" class="status" role="status" aria-live="polite"></div>
+      <div id="rd-body" class="rd-body"></div>
+      <div class="rd-controls" id="rd-controls">
+        <button class="btn" id="rd-prev" aria-label="Page précédente">◀</button>
+        <button class="btn" id="rd-pos" aria-label="Aller à…">1 / 1</button>
+        <button class="btn" id="rd-next" aria-label="Page suivante">▶</button>
+        <button class="btn" id="rd-mode">Texte</button>
+        <button class="btn" id="rd-minus" aria-label="Plus petit">A−</button>
+        <button class="btn" id="rd-plus" aria-label="Plus grand">A+</button>
+        <button class="btn" id="rd-ocr" title="Reconnaissance de texte, français et anglais">OCR</button>
+        <button class="btn primary" id="rd-send">Envoyer</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="rd-sheet" class="sheet" hidden><div id="rd-sheet-card" class="sheet-card"></div></div>
+
+<nav class="tabbar" aria-label="Sections">
+  <button data-tab="clean" class="on" aria-selected="true"><span aria-hidden="true">✦</span>Nettoyer</button>
+  <button data-tab="translate" aria-selected="false"><span aria-hidden="true">⇄</span>Traduire</button>
+  <button data-tab="notes" aria-selected="false"><span aria-hidden="true">☰</span>Carnet</button>
+  <button data-tab="books" aria-selected="false"><span aria-hidden="true">▤</span>Livres</button>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="cleaner.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+/* ---------- stockage ---------- */
+const mem = {};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return k in mem ? mem[k] : d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { mem[k] = v; return false; } }
+};
+const SETTINGS_KEY = 'textenet.settings.v1';
+const NOTES_KEY = 'textenet.notes.v1';
+const settings = Object.assign({
+  theme: 'auto', dehyphenate: true, pageNumbers: true, repeated: true, arabicForms: true,
+  arabicVisual: false, paraSep: 'blank', from: 'auto', to: 'fr',
+  cleanBeforeTranslate: false, watchClipboard: false, rdFont: 18, rdMargins: true
+}, store.get(SETTINGS_KEY, {}));
+const saveSettings = () => store.set(SETTINGS_KEY, settings);
+
+/* ---------- thème ---------- */
+const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && prefersDark());
+function applyTheme() {
+  const r = document.documentElement;
+  if (settings.theme === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', settings.theme);
+  $('meta[name=theme-color]').content = isDark() ? '#101513' : '#0f6b5c';
+}
+$('#btn-theme').onclick = () => { settings.theme = isDark() ? 'light' : 'dark'; saveSettings(); applyTheme(); };
+
+/* ---------- utilitaires ---------- */
+let toastT;
+function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms || 2200); }
+let lastClip = '';
+async function copyText(text) {
+  if (!text) { toast('Rien à copier'); return; }
+  lastClip = text;
+  try { await navigator.clipboard.writeText(text); toast('Copié'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Copié'); } catch (e2) { toast('Copie impossible'); }
+    ta.remove();
+  }
+}
+function downloadText(name, text) {
+  if (!text) { toast('Rien à enregistrer'); return; }
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('Fichier enregistré');
+}
+async function shareText(title, text) {
+  if (!text) { toast('Rien à partager'); return; }
+  if (navigator.share) { try { await navigator.share({ title, text }); } catch (e) { if (e.name !== 'AbortError') copyText(text); } }
+  else copyText(text);
+}
+const stamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+async function readClipboard() {
+  try { return await navigator.clipboard.readText(); }
+  catch (e) { toast('Accès au presse-papiers refusé : collez à la main'); return null; }
+}
+
+/* ---------- onglets ---------- */
+let editorOpen = false;
+function showTab(name) {
+  $$('.panel').forEach((p) => { p.hidden = p.id !== 'tab-' + name; });
+  $$('.tabbar button').forEach((b) => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  if (name === 'notes') renderList();
+  if (name === 'books' && window.Books) window.Books.onShow();
+  window.scrollTo(0, 0);
+}
+$$('.tabbar button').forEach((b) => b.onclick = () => { closeEditor(); showTab(b.dataset.tab); });
+
+/* ---------- options (cases à cocher, listes) ---------- */
+$$('[data-opt]').forEach((c) => {
+  const k = c.dataset.opt;
+  if (c.type === 'checkbox') c.checked = !!settings[k]; else c.value = settings[k];
+  c.addEventListener('change', () => {
+    settings[k] = c.type === 'checkbox' ? c.checked : c.value;
+    saveSettings();
+    if (k !== 'cleanBeforeTranslate' && k !== 'watchClipboard') runClean();
+  });
+});
+const cleanOpts = () => ({
+  dehyphenate: settings.dehyphenate, pageNumbers: settings.pageNumbers, repeated: settings.repeated,
+  arabicForms: settings.arabicForms, arabicVisual: settings.arabicVisual, paraSep: settings.paraSep
+});
+
+/* ---------- nettoyeur ---------- */
+const clIn = $('#cl-in'), clOut = $('#cl-out'), clStats = $('#cl-stats');
+function runClean() {
+  const src = clIn.value;
+  if (!src.trim()) { clOut.value = ''; clStats.textContent = ''; return; }
+  const { text, stats } = Cleaner.clean(src, cleanOpts());
+  clOut.value = text;
+  const fr = (n) => n.toLocaleString('fr-FR');
+  const parts = [`${fr(src.length)} → ${fr(text.length)} car.`, `${stats.paragraphs} §`];
+  if (stats.hyphens) parts.push(`${stats.hyphens} mot(s) recollé(s)`);
+  if (stats.pageNumbers) parts.push(`${stats.pageNumbers} n° de page`);
+  if (stats.repeated) parts.push(`${stats.repeated} en-tête(s)/pied(s)`);
+  clStats.textContent = parts.join(' · ');
+}
+const runCleanSoon = debounce(runClean, 350);
+clIn.addEventListener('input', runCleanSoon);
+$('#cl-paste').onclick = async () => {
+  const t = await readClipboard();
+  if (t === null) { clIn.focus(); return; }
+  if (!t) { toast('Presse-papiers vide'); return; }
+  lastClip = t; clIn.value = t; runClean();
+};
+$('#cl-clear').onclick = () => { clIn.value = ''; runClean(); clIn.focus(); };
+$('#cl-copy').onclick = () => copyText(clOut.value);
+$('#cl-save').onclick = () => downloadText(`texte-propre-${stamp()}.txt`, clOut.value);
+$('#cl-share').onclick = () => shareText('Texte nettoyé', clOut.value);
+$('#cl-to-tr').onclick = () => { trIn.value = clOut.value || clIn.value; showTab('translate'); };
+$('#cl-to-note').onclick = () => newNoteFrom(clOut.value || clIn.value);
+
+async function checkClipboard() {
+  if (!settings.watchClipboard || document.hidden || editorOpen) return;
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t && t !== lastClip && t.trim().length > 20) {
+      lastClip = t; showTab('clean'); clIn.value = t; runClean(); toast('Texte du presse-papiers nettoyé');
+    }
+  } catch (e) { /* permission refusée : on ignore */ }
+}
+window.addEventListener('focus', checkClipboard);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkClipboard(); });
+
+/* ---------- traducteur ---------- */
+const trIn = $('#tr-in'), trOut = $('#tr-out'), trStatus = $('#tr-status'), trGo = $('#tr-go');
+$('#tr-from').value = settings.from; $('#tr-to').value = settings.to;
+const tr = { running: false, abort: null, gtxDown: false };
+const bytes = (s) => new TextEncoder().encode(s).length;
+
+function detectLang(text) {
+  const letters = (text.match(/\p{L}/gu) || []).length || 1;
+  const ar = (text.match(/[؀-ۿ]/g) || []).length;
+  if (ar / letters > 0.3) return 'ar';
+  const FR = new Set(['le', 'la', 'les', 'des', 'du', 'de', 'et', 'est', 'une', 'un', 'que', 'qui', 'dans', 'pour', 'pas', 'sur', 'au', 'aux', 'avec', 'ce', 'se', 'ne', 'il', 'elle', 'nous', 'vous', 'sont', 'par', 'plus']);
+  const EN = new Set(['the', 'and', 'of', 'to', 'is', 'in', 'that', 'for', 'with', 'as', 'on', 'are', 'this', 'it', 'by', 'be', 'from', 'or', 'an', 'not', 'was', 'which', 'their']);
+  let f = 0, e = 0;
+  for (const w of (text.toLowerCase().match(/[a-zàâçéèêëîïôûùüÿœ']+/g) || [])) { if (FR.has(w)) f++; if (EN.has(w)) e++; }
+  if (f === e) return /[àâçéèêëîïôûùüÿœ]/i.test(text) ? 'fr' : 'en';
+  return f > e ? 'fr' : 'en';
+}
+
+function hardChunk(s, ok) {
+  const out = []; let cur = '';
+  for (const w of s.split(/\s+/)) {
+    const t = cur ? cur + ' ' + w : w;
+    if (ok(t)) { cur = t; continue; }
+    if (cur) out.push(cur);
+    if (ok(w)) { cur = w; continue; }
+    let piece = '';
+    for (const ch of Array.from(w)) { if (ok(piece + ch)) piece += ch; else { out.push(piece); piece = ch; } }
+    cur = piece;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function chunkParagraph(p, max, maxBytes) {
+  const ok = (s) => s.length <= max && (!maxBytes || bytes(s) <= maxBytes);
+  if (ok(p)) return [p];
+  const out = []; let cur = '';
+  const flush = () => { if (cur) { out.push(cur); cur = ''; } };
+  for (const s of p.split(/(?<=[.!?؟…;:])\s+/)) {
+    if (!ok(s)) { flush(); out.push(...hardChunk(s, ok)); continue; }
+    const t = cur ? cur + ' ' + s : s;
+    if (ok(t)) cur = t; else { flush(); cur = s; }
+  }
+  flush();
+  return out;
+}
+function decodeEntities(s) { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
+
+async function gtx(text, sl, tl, signal) {
+  const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&ie=UTF-8&oe=UTF-8`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: new URLSearchParams({ q: text }), signal
+  });
+  if (!res.ok) throw new Error('Google ' + res.status);
+  const data = await res.json();
+  if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Réponse Google inattendue');
+  return data[0].map((s) => (s && s[0]) || '').join('');
+}
+async function myMemory(text, sl, tl, signal) {
+  if (sl === tl) return text;
+  const out = [];
+  for (const part of chunkParagraph(text, 450, 450)) {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(part)}&langpair=${encodeURIComponent(sl + '|' + tl)}`, { signal });
+    if (!res.ok) throw new Error('MyMemory ' + res.status);
+    const data = await res.json();
+    if (String(data.responseStatus) !== '200') throw new Error(data.responseDetails || 'MyMemory : refus');
+    out.push(decodeEntities(data.responseData.translatedText));
+  }
+  return out.join(' ');
+}
+async function translateChunk(text, sl, tl, detected, signal) {
+  if (!tr.gtxDown) {
+    try { return { text: await gtx(text, sl, tl, signal), engine: 'Google' }; }
+    catch (e) { if (e.name === 'AbortError') throw e; tr.gtxDown = true; }
+  }
+  return { text: await myMemory(text, sl === 'auto' ? detected : sl, tl, signal), engine: 'MyMemory' };
+}
+async function translateText(text, sl, tl, onProgress, signal) {
+  const paragraphs = text.split('\n');
+  const detected = sl === 'auto' ? detectLang(text) : sl;
+  const result = paragraphs.map(() => []);
+  const jobs = [];
+  paragraphs.forEach((p, pi) => { if (p.trim()) chunkParagraph(p.trim(), 1500).forEach((c, ci) => jobs.push({ pi, ci, text: c })); });
+  let done = 0, idx = 0; const engines = new Set();
+  async function worker() {
+    while (idx < jobs.length && !signal.aborted) {
+      const j = jobs[idx++];
+      const r = await translateChunk(j.text, sl, tl, detected, signal);
+      result[j.pi][j.ci] = r.text; engines.add(r.engine); onProgress(++done, jobs.length);
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+  if (signal.aborted) throw new DOMException('Annulé', 'AbortError');
+  return { text: result.map((arr, i) => (paragraphs[i].trim() ? arr.join(' ') : '')).join('\n'), engines: [...engines] };
+}
+function setTrStatus(msg, err) { trStatus.textContent = msg; trStatus.classList.toggle('err', !!err); }
+
+trGo.onclick = async () => {
+  if (tr.running) { tr.abort.abort(); return; }
+  let text = trIn.value;
+  if (!text.trim()) { toast('Saisissez ou collez un texte'); return; }
+  const sl = $('#tr-from').value, tl = $('#tr-to').value;
+  if (sl === tl) { setTrStatus('Les deux langues sont identiques.', true); return; }
+  if (!navigator.onLine) { setTrStatus('Hors connexion : la traduction demande Internet.', true); return; }
+  if (settings.cleanBeforeTranslate) text = Cleaner.clean(text, cleanOpts()).text;
+  settings.from = sl; settings.to = tl; saveSettings();
+  tr.running = true; tr.gtxDown = false; tr.abort = new AbortController();
+  trGo.textContent = 'Annuler'; setTrStatus('Traduction…');
+  try {
+    const r = await translateText(text, sl, tl, (d, n) => setTrStatus(`Traduction… ${d}/${n}`), tr.abort.signal);
+    trOut.value = r.text;
+    setTrStatus('Traduit via ' + r.engines.join(' + ') + '.');
+  } catch (e) {
+    if (e.name === 'AbortError') setTrStatus('Traduction annulée.');
+    else setTrStatus('Traduction impossible (réseau ou quota). Réessayez plus tard. ' + (e.message || ''), true);
+  } finally { tr.running = false; trGo.textContent = 'Traduire'; }
+};
+$('#tr-swap').onclick = () => {
+  const f = $('#tr-from'), t = $('#tr-to');
+  const newTo = f.value === 'auto' ? detectLang(trIn.value) : f.value;
+  f.value = t.value; t.value = newTo;
+  const a = trIn.value; trIn.value = trOut.value; trOut.value = a;
+  settings.from = f.value; settings.to = t.value; saveSettings();
+};
+$('#tr-paste').onclick = async () => { const t = await readClipboard(); if (t) { lastClip = t; trIn.value = t; } else if (t === '') toast('Presse-papiers vide'); };
+$('#tr-clear').onclick = () => { trIn.value = ''; trOut.value = ''; setTrStatus(''); trIn.focus(); };
+$('#tr-copy').onclick = () => copyText(trOut.value);
+$('#tr-save').onclick = () => downloadText(`traduction-${stamp()}.txt`, trOut.value);
+$('#tr-to-note').onclick = () => newNoteFrom(trOut.value);
+
+/* ---------- carnet ---------- */
+let notes = store.get(NOTES_KEY, []);
+if (!Array.isArray(notes)) notes = [];
+const persist = () => { if (!store.set(NOTES_KEY, notes)) toast('Stockage indisponible : exportez vos notes'); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const fold = (s) => (s || '').normalize('NFD').replace(/[̀-ًͯ-ٰٟ]/g, '').toLowerCase();
+const parseTags = (s) => [...new Set((s || '').split(/[,;،\n]+|\s(?=#)/).map((t) => t.replace(/^\s*#+/, '').trim()).filter(Boolean))];
+const fmtDate = (ms) => new Date(ms).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+let activeTag = null;
+
+function renderList() {
+  const q = fold($('#nt-search').value.trim());
+  const tagCount = new Map();
+  notes.forEach((n) => (n.tags || []).forEach((t) => tagCount.set(t, (tagCount.get(t) || 0) + 1)));
+  if (activeTag && !tagCount.has(activeTag)) activeTag = null;
+  const chips = $('#nt-tags'); chips.replaceChildren();
+  [...tagCount.keys()].sort((a, b) => a.localeCompare(b)).forEach((t) => {
+    const b = el('button', 'chip' + (t === activeTag ? ' on' : ''), '#' + t);
+    b.onclick = () => { activeTag = activeTag === t ? null : t; renderList(); };
+    chips.append(b);
+  });
+  const shown = notes
+    .filter((n) => (!activeTag || (n.tags || []).includes(activeTag)) &&
+      (!q || fold([n.title, n.source, (n.tags || []).join(' '), n.body].join('\n')).includes(q)))
+    .sort((a, b) => b.updated - a.updated);
+  const list = $('#nt-list'); list.replaceChildren();
+  if (!shown.length) list.append(el('p', 'empty', notes.length ? 'Aucune note ne correspond.' : 'Aucune note pour l’instant. Touchez « + Note ».'));
+  shown.forEach((n) => {
+    const card = el('button', 'card');
+    const t = el('div', 't', n.title || '(Sans titre)'); t.dir = 'auto';
+    const m = el('div', 'm', [n.source, fmtDate(n.updated)].filter(Boolean).join(' · ')); m.dir = 'auto';
+    const s = el('div', 's', (n.body || '').replace(/\s+/g, ' ').slice(0, 220)); s.dir = 'auto';
+    card.append(t, m, s);
+    if ((n.tags || []).length) card.append(el('div', 'tg', n.tags.map((x) => '#' + x).join(' ')));
+    card.onclick = () => openEditor(n);
+    list.append(card);
+  });
+  $('#nt-count').textContent = notes.length ? `${shown.length} sur ${notes.length} note${notes.length > 1 ? 's' : ''}` : '';
+}
+$('#nt-search').addEventListener('input', debounce(renderList, 200));
+
+let current = null, dirty = false;
+const edTitle = $('#ed-title'), edSource = $('#ed-source'), edTags = $('#ed-tags'), edBody = $('#ed-body');
+function openEditor(note, preset) {
+  current = note ? { ...note } : { id: uid(), title: '', source: (preset && preset.source) || '', tags: [], body: (preset && preset.body) || '', created: Date.now(), updated: Date.now() };
+  dirty = false; // une note préremplie n'est enregistrée qu'après une modification
+  edTitle.value = current.title; edSource.value = current.source || '';
+  edTags.value = (current.tags || []).map((t) => '#' + t).join(' '); edBody.value = current.body;
+  $('#ed-date').textContent = note ? 'Modifiée le ' + fmtDate(current.updated) : 'Nouvelle note';
+  editorOpen = true;
+  $('#notes-list-view').hidden = true; $('#notes-editor').hidden = false;
+  history.pushState({ editor: true }, '');
+  window.scrollTo(0, 0);
+}
+function collect() {
+  current.title = edTitle.value.trim(); current.source = edSource.value.trim();
+  current.tags = parseTags(edTags.value); current.body = edBody.value; current.updated = Date.now();
+}
+let saveT;
+function flushSave() {
+  clearTimeout(saveT);
+  if (!current || !dirty) return;
+  collect();
+  const i = notes.findIndex((n) => n.id === current.id);
+  const empty = !current.title && !current.body.trim() && !current.source && !current.tags.length;
+  if (i < 0 && empty) return;
+  if (i >= 0) notes[i] = { ...current }; else notes.unshift({ ...current });
+  dirty = false; persist();
+}
+[edTitle, edSource, edTags, edBody].forEach((f) => f.addEventListener('input', () => { dirty = true; clearTimeout(saveT); saveT = setTimeout(flushSave, 500); }));
+function closeEditor(fromPop) {
+  if (!editorOpen) return;
+  flushSave(); current = null; editorOpen = false;
+  $('#notes-editor').hidden = true; $('#notes-list-view').hidden = false;
+  renderList();
+  if (!fromPop && history.state && history.state.editor) history.back();
+}
+window.addEventListener('popstate', () => { if (editorOpen) closeEditor(true); });
+function newNoteFrom(body, source) {
+  if (!body || !body.trim()) { toast('Aucun texte à envoyer'); return; }
+  closeEditor(); showTab('notes'); openEditor(null, { body, source }); edTitle.focus();
+}
+$('#nt-new').onclick = () => { openEditor(null); edTitle.focus(); };
+$('#ed-back').onclick = () => closeEditor();
+const formatNote = (n) => [
+  n.title || '(Sans titre)',
+  n.source ? 'Source : ' + n.source : '',
+  (n.tags || []).length ? 'Tags : ' + n.tags.map((t) => '#' + t).join(' ') : '',
+  'Date : ' + fmtDate(n.updated), '', n.body || ''
+].filter((l, i) => i === 0 || l !== '' || i === 4).join('\n');
+const safeName = (s) => (s || 'note').replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 50) || 'note';
+$('#ed-copy').onclick = () => copyText(edBody.value);
+$('#ed-share').onclick = () => { collect(); shareText(current.title || 'Note', formatNote(current)); };
+$('#ed-export').onclick = () => { collect(); downloadText(`${safeName(current.title)}.txt`, formatNote(current)); };
+$('#ed-delete').onclick = () => {
+  if (!confirm('Supprimer cette note ?')) return;
+  notes = notes.filter((n) => n.id !== current.id); persist();
+  current = null; dirty = false; closeEditor();
+};
+$('#nt-export-txt').onclick = () => {
+  if (!notes.length) { toast('Aucune note à exporter'); return; }
+  const all = [...notes].sort((a, b) => b.updated - a.updated).map(formatNote).join('\n\n' + '─'.repeat(24) + '\n\n');
+  downloadText(`carnet-${stamp()}.txt`, all);
+};
+$('#nt-backup').onclick = () => {
+  if (!notes.length) { toast('Aucune note à sauvegarder'); return; }
+  downloadText(`carnet-sauvegarde-${stamp()}.json`, JSON.stringify({ app: 'texte-net', version: 1, exported: new Date().toISOString(), notes }, null, 1));
+};
+$('#nt-import').onclick = () => $('#nt-file').click();
+$('#nt-file').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const incoming = Array.isArray(data) ? data : data.notes;
+    if (!Array.isArray(incoming)) throw new Error('format');
+    let added = 0, updated = 0;
+    incoming.forEach((n) => {
+      if (!n || typeof n !== 'object' || !n.id) return;
+      const rec = {
+        id: String(n.id), title: String(n.title || ''), source: String(n.source || ''),
+        tags: Array.isArray(n.tags) ? n.tags.map(String) : [], body: String(n.body || ''),
+        created: Number(n.created) || Date.now(), updated: Number(n.updated) || Date.now()
+      };
+      const i = notes.findIndex((x) => x.id === rec.id);
+      if (i < 0) { notes.push(rec); added++; } else if (rec.updated > notes[i].updated) { notes[i] = rec; updated++; }
+    });
+    persist(); renderList(); toast(`${added} ajoutée(s), ${updated} mise(s) à jour`);
+  } catch (err) { toast('Fichier de sauvegarde invalide'); }
+});
+
+/* ---------- passerelle pour books.js ---------- */
+window.TN = {
+  $, $$, el, toast, uid, copyText, downloadText, stamp, settings, saveSettings, cleanOpts, showTab,
+  setStats: (m) => { clStats.textContent = m; },
+  toCleaner: (text) => { closeEditor(); clIn.value = text; runClean(); showTab('clean'); },
+  toTranslate: (text) => { closeEditor(); trIn.value = text; showTab('translate'); },
+  toNote: (text, source) => newNoteFrom(text, source)
+};
+
+/* ---------- démarrage ---------- */
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+showTab('clean');
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { /* facultatif */ }
+
+// Texte partagé depuis un lecteur PDF (partage Android vers l'application installée)
+const params = new URLSearchParams(location.search);
+const shared = params.get('text');
+if (shared) {
+  clIn.value = shared; runClean();
+  history.replaceState(null, '', location.pathname);
+} else {
+  setTimeout(checkClipboard, 400);
+}
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+<script>window.TEXTE_NET_FLAT = true;</script>
+<script src="books.js"></script>
+</body>
+</html>
